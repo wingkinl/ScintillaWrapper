@@ -5,36 +5,35 @@
 #endif
 
 #ifndef WINVER
-#define WINVER 0x0502
+#define WINVER 0x0600
 #endif
 
 #ifndef _WIN32_WINNT
-#define _WIN32_WINNT 0x0502
-#endif						
+#define _WIN32_WINNT 0x0600
+#endif
 
 #ifndef _WIN32_WINDOWS
-#define _WIN32_WINDOWS 0x0502
+#define _WIN32_WINDOWS 0x0600
 #endif
 
 #ifndef _WIN32_IE
 #define _WIN32_IE 0x0600
 #endif
 
-#define VC_EXTRALEAN		// Exclude rarely-used stuff from Windows headers
-
-#define _ATL_CSTRING_EXPLICIT_CONSTRUCTORS	// some CString constructors will be explicit
-
-#define _AFX_ALL_WARNINGS // turns off MFC's hiding of some common and often safely ignored warning messages
+#define VC_EXTRALEAN //Exclude rarely-used stuff from Windows headers
+#define _ATL_CSTRING_EXPLICIT_CONSTRUCTORS / some CString constructors will be explicit
+#define _AFX_ALL_WARNINGS //turns off MFC's hiding of some common and often safely ignored warning messages
 
 #ifndef _SECURE_ATL
 #define _SECURE_ATL 1 //Use the Secure C Runtime in ATL
 #endif
 
-#include <afxwin.h>         // MFC core and standard components
-#include <afxext.h>         // MFC extensions
-#include <afxdisp.h>        // MFC OLE support
-#include <afxtempl.h>		    // MFC template support
-#include <memory>           // std::make_unique & std::unique_ptr support
+#include <afxwin.h> //MFC core and standard components
+#include <afxext.h> //MFC extensions
+#include <afxdisp.h> //MFC OLE support
+#include <memory>
+#include <array>
+#include <vector>
 
 
 //Pull in support for Scintilla

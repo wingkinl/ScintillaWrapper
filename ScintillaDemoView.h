@@ -2,23 +2,23 @@
 
 #include "ScintillaDocView.h"
 
+
+class CScintillaDemoCtrl : public CScintillaCtrl
+{
+public:
+};
+
 class CScintillaDemoView : public CScintillaView
 {
 protected: //create from serialization only
   CScintillaDemoView();
   DECLARE_DYNCREATE(CScintillaDemoView)
 
-//Attributes
 public:
   CScintillaDemoDoc* GetDocument();
 
-  virtual void OnDraw(CDC* pDC);  //overridden to draw this view
-  virtual void OnInitialUpdate();
-
-#ifdef _DEBUG
-  virtual void AssertValid() const;
-  virtual void Dump(CDumpContext& dc) const;
-#endif
+  void OnDraw(CDC* pDC) override;
+  void OnInitialUpdate() override;
 
 protected:
   afx_msg void OnOptionsAddmarker();
@@ -40,20 +40,13 @@ protected:
   afx_msg void OnActivate(UINT nState, CWnd* pWndOther, BOOL bMinimized);
 
   DECLARE_MESSAGE_MAP()
-    
-  virtual void OnCharAdded(_Inout_ SCNotification* pSCNotification);
-  virtual void OnDwellStart(_Inout_ SCNotification* pSCNotification);
-  virtual void OnDwellEnd(_Inout_ SCNotification* pSCNotification);
-  virtual void OnModifyAttemptRO(_Inout_ SCNotification* pSCNotification);
-  virtual void OnModified(_Inout_ SCNotification* pSCNotification);
+  void OnCharAdded(_Inout_ SCNotification* pSCNotification) override;
+  void OnDwellStart(_Inout_ SCNotification* pSCNotification) override;
+  void OnDwellEnd(_Inout_ SCNotification* pSCNotification) override;
+  void OnModifyAttemptRO(_Inout_ SCNotification* pSCNotification) override;
+  void OnModified(_Inout_ SCNotification* pSCNotification) override;
+  std::unique_ptr<CScintillaCtrl> CreateScintillaControl() override;
 
   void SetAStyle(int style, COLORREF fore, COLORREF back=RGB(0xff, 0xff, 0xff), int size=-1, const char *face=0);
   void DefineMarker(int marker, int markerType, COLORREF fore, COLORREF back);
 };
-
-#ifndef _DEBUG  //debug version in ScintillaDemoView.cpp
-inline CScintillaDemoDoc* CScintillaDemoView::GetDocument()
-{ 
-  return static_cast<CScintillaDemoDoc*>(m_pDocument); 
-}
-#endif

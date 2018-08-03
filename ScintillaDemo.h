@@ -5,15 +5,19 @@
 class CScintillaDemoApp : public CWinApp
 {
 public:
+//Constructors / Destructors
   CScintillaDemoApp();
 
-  virtual BOOL InitInstance();
-  virtual int ExitInstance();
+//Methods
+  BOOL InitInstance() override;
+  int ExitInstance() override;
   HMODULE LoadLibraryFromApplicationDirectory(LPCTSTR lpFileName);
 
+//Message handlers
   afx_msg void OnAppAbout();
 
   DECLARE_MESSAGE_MAP()
 
+//Member variables
   HINSTANCE m_hSciDLL;
 };

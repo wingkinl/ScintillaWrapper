@@ -2,17 +2,6 @@
 
 class CMainFrame : public CMDIFrameWnd
 {
-  DECLARE_DYNAMIC(CMainFrame)
-public:
-//Constructors / Destructors
-  CMainFrame();
-  virtual ~CMainFrame();
-
-#ifdef _DEBUG
-  virtual void AssertValid() const;
-  virtual void Dump(CDumpContext& dc) const;
-#endif
-
 protected:
 //Member variables
   CStatusBar m_wndStatusBar;
@@ -33,4 +22,5 @@ protected:
   afx_msg void OnUpdateInsert(CCmdUI* pCmdUI);
 
   DECLARE_MESSAGE_MAP()
+  DECLARE_DYNAMIC(CMainFrame)
 };

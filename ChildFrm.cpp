@@ -10,41 +10,24 @@
 #endif
 
 
+#pragma warning(suppress: 26409 26433 26440)
 IMPLEMENT_DYNCREATE(CChildFrame, CMDIChildWnd)
 
+#pragma warning(suppress: 26433 26440)
 BEGIN_MESSAGE_MAP(CChildFrame, CMDIChildWnd)
   ON_WM_MOVE()
   ON_WM_SIZE()
 END_MESSAGE_MAP()
 
-
-CChildFrame::CChildFrame()
-{
-}
-
-CChildFrame::~CChildFrame()
-{
-}
-
-#ifdef _DEBUG
-void CChildFrame::AssertValid() const
-{
-  CMDIChildWnd::AssertValid();
-}
-
-void CChildFrame::Dump(CDumpContext& dc) const
-{
-  CMDIChildWnd::Dump(dc);
-}
-#endif //_DEBUG
-
-void CChildFrame::OnMove(int x, int y) 
+#pragma warning(suppress: 26434)
+void CChildFrame::OnMove(int x, int y)
 {
   //Let the base class do its thing
-  CMDIChildWnd::OnMove(x, y);
-  
+  __super::OnMove(x, y);
+
+#pragma warning(suppress: 26466)
   CScintillaDemoView* pView = static_cast<CScintillaDemoView*>(GetActiveView());
-  if (pView)
+  if (pView != nullptr)
   {
     if (pView->IsKindOf(RUNTIME_CLASS(CScintillaDemoView)))
     {
@@ -57,13 +40,15 @@ void CChildFrame::OnMove(int x, int y)
   }
 }
 
+#pragma warning(suppress: 26434)
 void CChildFrame::OnSize(UINT nType, int cx, int cy) 
 {
   //Let the base class do its thing
   CMDIChildWnd::OnSize(nType, cx, cy);
   
+#pragma warning(suppress: 26466)
   CScintillaDemoView* pView = static_cast<CScintillaDemoView*>(GetActiveView());
-  if (pView)
+  if (pView != nullptr)
   {
     if (pView->IsKindOf(RUNTIME_CLASS(CScintillaDemoView)))
     {

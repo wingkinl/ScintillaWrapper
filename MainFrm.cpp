@@ -9,8 +9,10 @@
 #endif
 
 
+#pragma warning(suppress: 26433 26440)
 IMPLEMENT_DYNAMIC(CMainFrame, CMDIFrameWnd)
 
+#pragma warning(suppress: 26433 26440)
 BEGIN_MESSAGE_MAP(CMainFrame, CMDIFrameWnd)
   ON_WM_CREATE()
   ON_WM_SETTINGCHANGE()
@@ -24,7 +26,7 @@ BEGIN_MESSAGE_MAP(CMainFrame, CMDIFrameWnd)
   ON_WM_DROPFILES()
 END_MESSAGE_MAP()
 
-static UINT indicators[] =
+std::array<UINT, 8> g_Indicators =
 {
   ID_SEPARATOR, //status line indicator
   ID_INDICATOR_FOLD,
@@ -33,42 +35,34 @@ static UINT indicators[] =
   ID_INDICATOR_OVR,
   ID_INDICATOR_CAPS,
   ID_INDICATOR_NUM,
-  ID_INDICATOR_SCRL,
+  ID_INDICATOR_SCRL
 };
 
-CMainFrame::CMainFrame()
-{
-}
-
-CMainFrame::~CMainFrame()
-{
-}
-
+#pragma warning(suppress: 26434)
 int CMainFrame::OnCreate(LPCREATESTRUCT lpCreateStruct)
 {
   //Let the base class do its thing
-  if (CMDIFrameWnd::OnCreate(lpCreateStruct) == -1)
+  if (__super::OnCreate(lpCreateStruct) == -1)
     return -1;
-  
-  //Create the toolbar  
-  if (!m_wndToolBar.Create(this) ||
-      !m_wndToolBar.LoadToolBar(IDR_MAINFRAME))
+
+  //Create the toolbar
+  if (!m_wndToolBar.Create(this) || !m_wndToolBar.LoadToolBar(IDR_MAINFRAME))
   {
     TRACE(_T("Failed to create toolbar\n"));
-    return -1;      // fail to create
+    return -1;
   }
 
-  //Set the title of the toolbar.
+  //Set the title of the toolbar
   CString sTitle;
   VERIFY(sTitle.LoadString(IDS_TOOLBAR));
   m_wndToolBar.SetWindowText(sTitle);
 
   //Create the status bar
-  if (!m_wndStatusBar.Create(this) ||
-      !m_wndStatusBar.SetIndicators(indicators, sizeof(indicators)/sizeof(UINT)))
+  #pragma warning(suppress: 26472)
+  if (!m_wndStatusBar.Create(this) || !m_wndStatusBar.SetIndicators(g_Indicators.data(), static_cast<int>(g_Indicators.size())))
   {
     TRACE(_T("Failed to create status bar\n"));
-    return -1;      // fail to create
+    return -1;
   }
 
   //Setup docing an tooltips for the toolbar
@@ -79,39 +73,33 @@ int CMainFrame::OnCreate(LPCREATESTRUCT lpCreateStruct)
   return 0;
 }
 
-#ifdef _DEBUG
-void CMainFrame::AssertValid() const
-{
-  CMDIFrameWnd::AssertValid();
-}
-
-void CMainFrame::Dump(CDumpContext& dc) const
-{
-  CMDIFrameWnd::Dump(dc);
-}
-#endif //#ifdef _DEBUG
-
+#pragma warning(suppress: 26434)
 void CMainFrame::OnSettingChange(UINT uFlags, LPCTSTR lpszSection) 
 {
   //Validate our parameters
-  CWinApp* pApp = AfxGetApp();
+  const CWinApp* pApp = AfxGetApp();
+#pragma warning(suppress: 26496)
   AFXASSUME(pApp != nullptr);
 
   //Pass the message on to all scintilla control
   POSITION posTemplate = pApp->GetFirstDocTemplatePosition();
   if (posTemplate != nullptr)
   {
-    CDocTemplate* pTemplate = pApp->GetNextDocTemplate(posTemplate);
+#pragma warning(suppress: 26429)
+    const CDocTemplate* pTemplate = pApp->GetNextDocTemplate(posTemplate);
+    ASSERT(pTemplate != nullptr);
     POSITION posDoc = pTemplate->GetFirstDocPosition();
     if (posDoc != nullptr)
     {
-      CDocument* pDocument = pTemplate->GetNextDoc(posDoc);
+      const CDocument* pDocument = pTemplate->GetNextDoc(posDoc);
       if (pDocument != nullptr)
       {
         POSITION posView = pDocument->GetFirstViewPosition();
         if (posView != nullptr)
         {
+#pragma warning(suppress: 26429 26466)
           CScintillaView* pView = static_cast<CScintillaView*>(pDocument->GetNextView(posView));
+          ASSERT(pView != nullptr);
           if (pView->IsKindOf(RUNTIME_CLASS(CScintillaView)))
           {
             const MSG* pMsg = GetCurrentMessage();
@@ -123,29 +111,35 @@ void CMainFrame::OnSettingChange(UINT uFlags, LPCTSTR lpszSection)
   }
 
   //Let the base class do its thing
-  CMDIFrameWnd::OnSettingChange(uFlags, lpszSection);
+  __super::OnSettingChange(uFlags, lpszSection);
 }
 
+#pragma warning(suppress: 26434)
 void CMainFrame::OnSysColorChange() 
 {
-  CWinApp* pApp = AfxGetApp();
+  const CWinApp* pApp = AfxGetApp();
+#pragma warning(suppress: 26496)
   AFXASSUME(pApp != nullptr);
 
   //Pass the message on to all scintilla control
   POSITION posTemplate = pApp->GetFirstDocTemplatePosition();
   if (posTemplate != nullptr)
   {
-    CDocTemplate* pTemplate = pApp->GetNextDocTemplate(posTemplate);
+#pragma warning(suppress: 26429)
+    const CDocTemplate* pTemplate = pApp->GetNextDocTemplate(posTemplate);
+    ASSERT(pTemplate != nullptr);
     POSITION posDoc = pTemplate->GetFirstDocPosition();
     if (posDoc != nullptr)
     {
-      CDocument* pDocument = pTemplate->GetNextDoc(posDoc);
+      const CDocument* pDocument = pTemplate->GetNextDoc(posDoc);
       if (pDocument != nullptr)
       {
         POSITION posView = pDocument->GetFirstViewPosition();
         if (posView != nullptr)
         {
+#pragma warning(suppress: 26429 26466)
           CScintillaView* pView = static_cast<CScintillaView*>(pDocument->GetNextView(posView));
+          ASSERT(pView != nullptr);
           if (pView->IsKindOf(RUNTIME_CLASS(CScintillaView)))
           {
             const MSG* pMsg = GetCurrentMessage();
@@ -157,29 +151,35 @@ void CMainFrame::OnSysColorChange()
   }
 
   //Let the base class do its thing
-  CMDIFrameWnd::OnSysColorChange();
+  __super::OnSysColorChange();
 }
 
+#pragma warning(suppress: 26434)
 void CMainFrame::OnPaletteChanged(CWnd* pFocusWnd) 
 {
-  CWinApp* pApp = AfxGetApp();
+  const CWinApp* pApp = AfxGetApp();
+#pragma warning(suppress: 26496)
   AFXASSUME(pApp != nullptr);
 
   //Pass the message on to all scintilla control
   POSITION posTemplate = pApp->GetFirstDocTemplatePosition();
   if (posTemplate != nullptr)
   {
-    CDocTemplate* pTemplate = pApp->GetNextDocTemplate(posTemplate);
+#pragma warning(suppress: 26429)
+    const CDocTemplate* pTemplate = pApp->GetNextDocTemplate(posTemplate);
+    ASSERT(pTemplate != nullptr);
     POSITION posDoc = pTemplate->GetFirstDocPosition();
     if (posDoc != nullptr)
     {
-      CDocument* pDocument = pTemplate->GetNextDoc(posDoc);
+      const CDocument* pDocument = pTemplate->GetNextDoc(posDoc);
       if (pDocument != nullptr)
       {
         POSITION posView = pDocument->GetFirstViewPosition();
         if (posView != nullptr)
         {
+#pragma warning(suppress: 26429 26466)
           CScintillaView* pView = static_cast<CScintillaView*>(pDocument->GetNextView(posView));
+          ASSERT(pView != nullptr);
           if (pView->IsKindOf(RUNTIME_CLASS(CScintillaView)))
           {
             const MSG* pMsg = GetCurrentMessage();
@@ -191,29 +191,35 @@ void CMainFrame::OnPaletteChanged(CWnd* pFocusWnd)
   }
 
   //Let the base class do its thing
-  CMDIFrameWnd::OnPaletteChanged(pFocusWnd);
+  __super::OnPaletteChanged(pFocusWnd);
 }
 
-BOOL CMainFrame::OnQueryNewPalette() 
+#pragma warning(suppress: 26434)
+BOOL CMainFrame::OnQueryNewPalette()
 {
-  CWinApp* pApp = AfxGetApp();
+  const CWinApp* pApp = AfxGetApp();
+#pragma warning(suppress: 26496)
   AFXASSUME(pApp);
 
   //Pass the message on to all scintilla control
   POSITION posTemplate = pApp->GetFirstDocTemplatePosition();
   if (posTemplate != nullptr)
   {
-    CDocTemplate* pTemplate = pApp->GetNextDocTemplate(posTemplate);
+#pragma warning(suppress: 26429)
+    const CDocTemplate* pTemplate = pApp->GetNextDocTemplate(posTemplate);
+    ASSERT(pTemplate != nullptr);
     POSITION posDoc = pTemplate->GetFirstDocPosition();
     if (posDoc != nullptr)
     {
-      CDocument* pDocument = pTemplate->GetNextDoc(posDoc);
+      const CDocument* pDocument = pTemplate->GetNextDoc(posDoc);
       if (pDocument != nullptr)
       {
         POSITION posView = pDocument->GetFirstViewPosition();
         if (posView != nullptr)
         {
+#pragma warning(suppress: 26429 26466)
           CScintillaView* pView = static_cast<CScintillaView*>(pDocument->GetNextView(posView));
+          ASSERT(pView != nullptr);
           if (pView->IsKindOf(RUNTIME_CLASS(CScintillaView)))
           {
             const MSG* pMsg = GetCurrentMessage();
@@ -225,26 +231,29 @@ BOOL CMainFrame::OnQueryNewPalette()
   }
 
   //Let the base class do its thing
-  return CMDIFrameWnd::OnQueryNewPalette();
+  return __super::OnQueryNewPalette();
 }
 
+#pragma warning(suppress: 26429)
 void CMainFrame::OnUpdateInsert(CCmdUI* pCmdUI)
 {
   pCmdUI->SetText(_T(""));
 }
 
+#pragma warning(suppress: 26429)
 void CMainFrame::OnUpdateStyle(CCmdUI* pCmdUI)
 {
    pCmdUI->SetText(_T(""));
-} 
+}
 
+#pragma warning(suppress: 26429)
 void CMainFrame::OnUpdateFold(CCmdUI* pCmdUI)
 {
   pCmdUI->SetText(_T(""));
-} 
+}
 
+#pragma warning(suppress: 26429)
 void CMainFrame::OnUpdateLine(CCmdUI* pCmdUI)
 {
   pCmdUI->SetText(_T(""));
-} 
-
+}

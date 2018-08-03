@@ -259,7 +259,7 @@ BEGIN
             VALUE "FileDescription", "ScintillaDemo MFC Application"
             VALUE "FileVersion", "1, 0, 0, 1"
             VALUE "InternalName", "ScintillaDemo"
-            VALUE "LegalCopyright", "Copyright (c) PJ Naughter 2004 - 2017. All rights reserved."
+            VALUE "LegalCopyright", "Copyright (c) PJ Naughter 2004 - 2018. All rights reserved."
             VALUE "OriginalFilename", "ScintillaDemo.exe"
             VALUE "ProductName", "ScintillaDemo Application"
             VALUE "ProductVersion", "1, 0, 0, 1"

@@ -4,7 +4,7 @@ Purpose: Defines the interface for MFC CView and CDocument derived wrapper class
          edit control (www.scintilla.org)
 Created: PJN / 19-03-2004
 
-Copyright (c) 2004 - 2017 by PJ Naughter (Web: www.naughter.com, Email: pjna@naughter.com)
+Copyright (c) 2004 - 2018 by PJ Naughter (Web: www.naughter.com, Email: pjna@naughter.com)
 
 All rights reserved.
 
@@ -29,10 +29,10 @@ to maintain a single distribution point for the source code.
 
 #include "ScintillaCtrl.h"
 
-#ifndef __AFXTEMPL_H__
-#pragma message("To avoid this message please put afxtempl.h into your pre compiled header (normally stdafx.h)")
-#include <afxtempl.h>
-#endif //#ifndef __AFXTEMPL_H__
+#ifndef _VECTOR_
+#pragma message("To avoid this message please put vector into your pre compiled header (normally stdafx.h)")
+#include <vector>
+#endif //#ifndef _VECTOR_
 
 #ifndef _MEMORY_
 #pragma message("To avoid this message please put memory into your pre compiled header (normally stdafx.h)")
@@ -51,23 +51,42 @@ class SCINTILLADOCVIEW_EXT_CLASS CScintillaFindReplaceDlg : public CFindReplaceD
 {
 public:
 //Constructors / Destructors
-  CScintillaFindReplaceDlg();
+  CScintillaFindReplaceDlg() noexcept;
 
 //Methods
-  virtual BOOL Create(BOOL bFindDialogOnly, LPCTSTR lpszFindWhat, LPCTSTR lpszReplaceWith = nullptr, DWORD dwFlags = FR_DOWN, CWnd* pParentWnd = nullptr);
-  BOOL GetRegularExpression() const { return m_bRegularExpression; };
-  void SetRegularExpression(_In_ BOOL bRegularExpression) { m_bRegularExpression = bRegularExpression; };
+  BOOL Create(BOOL bFindDialogOnly, LPCTSTR lpszFindWhat, LPCTSTR lpszReplaceWith = nullptr, DWORD dwFlags = FR_DOWN, CWnd* pParentWnd = nullptr) override;
+  BOOL GetRegularExpression() const noexcept { return m_bRegularExpression; };
+  void SetRegularExpression(_In_ BOOL bRegularExpression) noexcept { m_bRegularExpression = bRegularExpression; };
 
 protected:
-  virtual BOOL OnInitDialog();
-
-  afx_msg void OnRegularExpression();
-  afx_msg void OnNcDestroy();
-  
 //Member variables
   BOOL m_bRegularExpression;
 
+//Methods
+  BOOL OnInitDialog() override;
+
+//Message handlers
+  afx_msg void OnRegularExpression();
+  afx_msg void OnNcDestroy();
+
   DECLARE_MESSAGE_MAP()
+};
+
+class SCINTILLADOCVIEW_EXT_CLASS CScintillaEditState
+{
+public:
+    //Constructors / Destructors
+    CScintillaEditState() noexcept;
+
+    //Member variables
+    CScintillaFindReplaceDlg* pFindReplaceDlg;    //find or replace dialog
+    BOOL                      bFindOnly;          //Is pFindReplace the find or replace?
+    CString                   strFind;            //last find string
+    CString                   strReplace;         //last replace string
+    BOOL                      bCase;              //TRUE==case sensitive, FALSE==not
+    int                       bNext;              //TRUE==search down, FALSE== search up
+    BOOL                      bWord;              //TRUE==match whole word, FALSE==not
+    BOOL                      bRegularExpression; //TRUE==regular expression search, FALSE==not
 };
 
 class SCINTILLADOCVIEW_EXT_CLASS CScintillaView : public CView
@@ -78,23 +97,22 @@ public:
 
 //Methods
   CScintillaCtrl& GetCtrl();
-  void            SetMargins(_In_ const CRect& rMargin) { m_rMargin = rMargin; };
-  CRect           GetMargins() const { return m_rMargin; };
-  BOOL            GetUseROFileAttributeDuringLoading() const { return m_bUseROFileAttributeDuringLoading; };
-  void            SetUseROFileAttributeDuringLoading(_In_ BOOL bUseROFileAttributeDuringLoading) { m_bUseROFileAttributeDuringLoading = bUseROFileAttributeDuringLoading; };
+  void            SetMargins(_In_ const CRect& rMargin) noexcept { m_rMargin = rMargin; };
+  CRect           GetMargins() const noexcept { return m_rMargin; };
+  BOOL            GetUseROFileAttributeDuringLoading() const noexcept { return m_bUseROFileAttributeDuringLoading; };
+  void            SetUseROFileAttributeDuringLoading(_In_ BOOL bUseROFileAttributeDuringLoading) noexcept { m_bUseROFileAttributeDuringLoading = bUseROFileAttributeDuringLoading; };
 
 #ifdef _DEBUG
-  virtual void AssertValid() const;
-  virtual void Dump(CDumpContext& dc) const;
+  void Dump(CDumpContext& dc) const override;
 #endif //#ifdef _DEBUG
 
 protected:
 //Printing support
-  virtual void OnPrepareDC(CDC* pDC, CPrintInfo* pInfo);
-  virtual BOOL OnPreparePrinting(CPrintInfo* pInfo);
-  virtual void OnBeginPrinting(CDC* pDC, CPrintInfo* pInfo);
-  virtual void OnPrint(CDC* pDC, CPrintInfo* pInfo);
-  virtual void OnEndPrinting(CDC* pDC, CPrintInfo* pInfo = nullptr);
+  void OnPrepareDC(CDC* pDC, CPrintInfo* pInfo) override;
+  BOOL OnPreparePrinting(CPrintInfo* pInfo) override;
+  void OnBeginPrinting(CDC* pDC, CPrintInfo* pInfo) override;
+  void OnPrint(CDC* pDC, CPrintInfo* pInfo) override;
+  void OnEndPrinting(CDC* pDC, CPrintInfo* pInfo = nullptr) override;
   virtual BOOL PaginateTo(CDC* pDC, CPrintInfo* pInfo);
   virtual Sci_Position PrintPage(CDC* pDC, CPrintInfo* pInfo, Sci_Position nIndexStart, Sci_Position nIndexStop);
   virtual void PrintHeader(CDC* pDC, CPrintInfo* pInfo, Sci_RangeToFormat& frPrint);
@@ -114,16 +132,16 @@ protected:
   virtual CScintillaFindReplaceDlg* CreateFindReplaceDialog();
 
 //Misc methods
-  virtual void OnDraw(CDC* pDC);
-  virtual BOOL OnNotify(WPARAM wParam, LPARAM lParam, LRESULT* pResult);
+  void OnDraw(CDC* pDC) override;
+  BOOL OnNotify(WPARAM wParam, LPARAM lParam, LRESULT* pResult) override;
   virtual void DeleteContents();
-  virtual void Serialize(CArchive& ar);
-  virtual BOOL OnCommand(WPARAM wParam, LPARAM lParam);
-  virtual void OnActivateView(BOOL bActivate, CView* pActivateView, CView* pDeactiveView);
-  static BOOL UserWantsMetric();
+  void Serialize(CArchive& ar) override;
+  BOOL OnCommand(WPARAM wParam, LPARAM lParam) override;
+  void OnActivateView(BOOL bActivate, CView* pActivateView, CView* pDeactiveView) override;
+  virtual BOOL UserWantsMetric();
   virtual void LoadMarginSettings(const CString& sSection = _T("PageSetup"));
   virtual void SaveMarginSettings(const CString& sSection = _T("PageSetup"));
-  virtual std::unique_ptr<CScintillaCtrl> CreateControl();
+  virtual std::unique_ptr<CScintillaCtrl> CreateScintillaControl();
   virtual BOOL ShouldDestroyFindReplaceDialog();
 
 //Notifications
@@ -137,6 +155,7 @@ protected:
   virtual void OnModified(_Inout_ SCNotification* pSCNotification);
   virtual void OnMacroRecord(_Inout_ SCNotification* pSCNotification);
   virtual void OnMarginClick(_Inout_ SCNotification* pSCNotification);
+  virtual void OnMarginRightClick(_Inout_ SCNotification* pSCNotification);
   virtual void OnNeedShown(_Inout_ SCNotification* pSCNotification);
   virtual void OnPainted(_Inout_ SCNotification* pSCNotification);
   virtual void OnUserListSelection(_Inout_ SCNotification* pSCNotification);
@@ -156,14 +175,16 @@ protected:
   virtual void OnFocusOut(_Inout_ SCNotification* pSCNotification);
   virtual void OnAutoCCompleted(_Inout_ SCNotification* pSCNotification);
   virtual void OnChange();
-  virtual void OnSetFocus();
-  virtual void OnKillFocus();
+  virtual void OnScintillaSetFocus();
+  virtual void OnScintillaKillFocus();
 
 //Member variables
   std::unique_ptr<CScintillaCtrl>    m_pEdit;                            //The scintilla control
-  CArray<Sci_Position, Sci_Position> m_aPageStart;                       //array of starting pages
+  std::vector<Sci_Position>          m_PageStart;                       //array of starting pages
   CRect                              m_rMargin;                          //Margin for printing
   BOOL                               m_bFirstSearch;                     //Is this the first search
+  BOOL                               m_bChangeFindRange;                 //Should search start again from beginning
+  Sci_Position                       m_lInitialSearchPos;                //Initial search position
   BOOL                               m_bUseROFileAttributeDuringLoading; //Should we check the RO file attribute to see if the file should be opened in read only mode by scintilla
   BOOL                               m_bPrintHeader;                     //Should Headers be printed?
   BOOL                               m_bPrintFooter;                     //Should Footers be printed?
@@ -194,7 +215,7 @@ protected:
   afx_msg int OnCreate(LPCREATESTRUCT lpCreateStruct);
   afx_msg void OnFilePageSetup();
   afx_msg void OnDestroy();
-  afx_msg BOOL OnEraseBkgnd(CDC* pDC);
+  afx_msg BOOL OnEraseBkgnd(CDC* pDC) noexcept;
   afx_msg LRESULT OnFindReplaceCmd(WPARAM, LPARAM lParam);
 
   DECLARE_MESSAGE_MAP()
@@ -216,16 +237,11 @@ public:
 
 //Implementation
 public:
-  virtual void DeleteContents();
-  virtual BOOL IsModified();
-  virtual void SetModifiedFlag(BOOL bModified = TRUE);
-  virtual void Serialize(CArchive& ar);
-  virtual BOOL OnSaveDocument(LPCTSTR lpszPathName);
-
-#ifdef _DEBUG
-  virtual void AssertValid() const;
-  virtual void Dump(CDumpContext& dc) const;
-#endif //#ifdef _DEBUG
+  void DeleteContents() override;
+  BOOL IsModified() override;
+  void SetModifiedFlag(BOOL bModified = TRUE) override;
+  void Serialize(CArchive& ar) override;
+  BOOL OnSaveDocument(LPCTSTR lpszPathName) override;
 };
 
 

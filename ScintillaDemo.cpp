@@ -10,6 +10,7 @@
 #define new DEBUG_NEW
 #endif
 
+#pragma warning(suppress: 26440 26433)
 BEGIN_MESSAGE_MAP(CScintillaDemoApp, CWinApp)
   ON_COMMAND(ID_APP_ABOUT, &CScintillaDemoApp::OnAppAbout)
   ON_COMMAND(ID_FILE_NEW, &CWinApp::OnFileNew)
@@ -17,36 +18,40 @@ BEGIN_MESSAGE_MAP(CScintillaDemoApp, CWinApp)
   ON_COMMAND(ID_FILE_PRINT_SETUP, &CWinApp::OnFilePrintSetup)
 END_MESSAGE_MAP()
 
+#pragma warning(suppress: 26426)
 CScintillaDemoApp theApp;
 
 
-CScintillaDemoApp::CScintillaDemoApp()
+#pragma warning(suppress: 26439)
+CScintillaDemoApp::CScintillaDemoApp() : m_hSciDLL(nullptr)
 {
 }
 
 HMODULE CScintillaDemoApp::LoadLibraryFromApplicationDirectory(LPCTSTR lpFileName)
 {
   //Get the Application diretory
-  TCHAR szFullPath[_MAX_PATH];
-  szFullPath[0] = _T('\0');
-  if (GetModuleFileName(nullptr, szFullPath, _countof(szFullPath)) == 0)
+  CString sFullPath;
+  const int nGMFN = GetModuleFileName(nullptr, sFullPath.GetBuffer(_MAX_PATH), _MAX_PATH);
+  sFullPath.ReleaseBuffer();
+  if (nGMFN == 0)
     return nullptr;
 
   //Form the new path
-  TCHAR szDrive[_MAX_DRIVE];
-  szDrive[0] = _T('\0');
-  TCHAR szDir[_MAX_DIR];
-  szDir[0] = _T('\0');
-  _tsplitpath_s(szFullPath, szDrive, sizeof(szDrive)/sizeof(TCHAR), szDir, sizeof(szDir)/sizeof(TCHAR), nullptr, 0, nullptr, 0);
-   TCHAR szFname[_MAX_FNAME];
-   szFname[0] = _T('\0');
-   TCHAR szExt[_MAX_EXT];
-   szExt[0] = _T('\0');
-  _tsplitpath_s(lpFileName, nullptr, 0, nullptr, 0, szFname, sizeof(szFname)/sizeof(TCHAR), szExt, sizeof(szExt)/sizeof(TCHAR));
-  _tmakepath_s(szFullPath, sizeof(szFullPath)/sizeof(TCHAR), szDrive, szDir, szFname, szExt);
+  CString sDrive;
+  CString sDir;
+  _tsplitpath_s(sFullPath, sDrive.GetBuffer(_MAX_DRIVE), _MAX_DRIVE, sDir.GetBuffer(_MAX_DIR), _MAX_DIR, nullptr, 0, nullptr, 0);
+  sDir.ReleaseBuffer();
+  sDrive.ReleaseBuffer();
+  CString sFname;
+  CString sExt;
+  _tsplitpath_s(lpFileName, nullptr, 0, nullptr, 0, sFname.GetBuffer(_MAX_FNAME), _MAX_FNAME, sExt.GetBuffer(_MAX_EXT), _MAX_EXT);
+  sExt.ReleaseBuffer();
+  sFname.ReleaseBuffer();
+  _tmakepath_s(sFullPath.GetBuffer(_MAX_PATH), _MAX_PATH, sDrive, sDir, sFname, sExt);
+  sFullPath.ReleaseBuffer();
 
-  //Delegate to LoadLibrary    
-  return LoadLibrary(szFullPath);
+  //Delegate to LoadLibrary
+  return LoadLibrary(sFullPath);
 }
 
 BOOL CScintillaDemoApp::InitInstance()
@@ -65,6 +70,7 @@ BOOL CScintillaDemoApp::InitInstance()
 
   //Register the application's document templates.  Document templates
   //serve as the connection between documents, frame windows and views.
+#pragma warning(suppress: 26400 26409)
   CMultiDocTemplate* pDocTemplate = new CMultiDocTemplate(IDR_SCINTITYPE,
     RUNTIME_CLASS(CScintillaDemoDoc),
     RUNTIME_CLASS(CChildFrame), // custom MDI child frame
@@ -72,6 +78,7 @@ BOOL CScintillaDemoApp::InitInstance()
   AddDocTemplate(pDocTemplate);
 
   //create main MDI Frame window
+#pragma warning(suppress: 26400 26409)
   CMainFrame* pMainFrame = new CMainFrame;
   if (!pMainFrame->LoadFrame(IDR_MAINFRAME))
     return FALSE;
@@ -95,13 +102,17 @@ BOOL CScintillaDemoApp::InitInstance()
   return TRUE;
 }
 
-int CScintillaDemoApp::ExitInstance() 
+int CScintillaDemoApp::ExitInstance()
 {
   //Free up the Scintilla DLL
   if (m_hSciDLL)
+  {
     FreeLibrary(m_hSciDLL);
-  
-  return CWinApp::ExitInstance();
+    m_hSciDLL = nullptr;
+  }
+
+  //Let the base class do its thing
+  return __super::ExitInstance();
 }
 
 
@@ -113,21 +124,24 @@ public:
   enum { IDD = IDD_ABOUTBOX };
 
 protected:
-  virtual void DoDataExchange(CDataExchange* pDX);    // DDX/DDV support
+  virtual void DoDataExchange(CDataExchange* pDX);
 
   DECLARE_MESSAGE_MAP()
 };
 
+#pragma warning(suppress: 26439)
 CAboutDlg::CAboutDlg() : CDialog(CAboutDlg::IDD)
 {
 }
 
+#pragma warning(suppress: 26433)
 void CAboutDlg::DoDataExchange(CDataExchange* pDX)
 {
   //Let the base class do its thing
   CDialog::DoDataExchange(pDX);
 }
 
+#pragma warning(suppress: 26440 26433)
 BEGIN_MESSAGE_MAP(CAboutDlg, CDialog)
 END_MESSAGE_MAP()
 

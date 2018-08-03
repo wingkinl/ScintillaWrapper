@@ -140,7 +140,7 @@ History: PJN / 19-03-2004 1. Initial implementation synchronized to the v1.59 re
                           SCI_SETCARETLINEVISIBLEALWAYS.
                           3. The classes are now encapsulated in a Scintilla namespace if the SCI_NAMESPACE define
                           is defined. This is consistent with how the scintilla.h header file operates in the 
-                          presence of this define. Thanks to Markus Niﬂl for prompting this update.
+                          presence of this define. Thanks to Markus Nissl for prompting this update.
                           4. Updated the sample app to compile when the SCI_NAMESPACE define is defined.
                           5. The sample app is now built by default with the SCI_NAMESPACE defined. This means that all the 
                           classes of the author will appear in the "Scintilla" namespace.
@@ -200,8 +200,32 @@ History: PJN / 19-03-2004 1. Initial implementation synchronized to the v1.59 re
                           value from the SetSelection and AddSelection methods
                           3. Updated the download to include the correct VC 2010 project files. Thanks to Kenny Lau for reporting this
                           issue.
-                          
-Copyright (c) 2004 - 2017 by PJ Naughter (Web: www.naughter.com, Email: pjna@naughter.com)
+         PJN / 03-04-2017 1. Updated class to work with Scintilla v3.7.4. New messages wrapped include: SCI_SETACCESSIBILITY & 
+                          SCI_GETACCESSIBILITY
+         PJN / 12-06-2017 1. Updated class to work with Scintilla v3.7.5. New messages wrapped include: SCI_GETCARETLINEFRAME, 
+                          SCI_SETCARETLINEFRAME & SCI_LINEREVERSE
+         PJN / 31-08-2017 1. Updated class to work with Scintilla v4.0.0. New messages wrapped include: SCI_GETNAMEDSTYLES, SCI_NAMEOFSTYLE,
+                          SCI_TAGSOFSTYLE & SCI_DESCRIPTIONOFSTYLE. Messages removed include SCI_GETTWOPHASEDRAW & SCI_SETTWOPHASEDRAW
+                          2. Fixed up a number of compiler warnings when the code is compiled for x64
+         PJN / 27-12-2017 1. Updated class to work with Scintilla v4.0.2. Some messages have been removed in 4.0.2 including SCI_SETSTYLEBITS,
+                          SCI_GETSTYLEBITS & SCI_GETSTYLEBITSNEEDED.
+         PJN / 03-01-2018 1. Updated copyright details.
+                          2. Removed Unicode versions of MarginSetStyles & AnnotationSetStyles methods as these methods take byte buffers
+                          and do not take text data. Thanks to Karagoez Yusuf for reporting this issue.
+         PJN / 18-03-2018 1. Updated class to work with Scintilla v4.0.3. New parameters to SCI_CREATEDOCUMENT & SCI_CREATELOADER messages.
+                          New messages wrapped include: SCI_GETMOVEEXTENDSSELECTION message, SCI_GETBIDIRECTIONAL & SCI_SETBIDIRECTIONAL
+                          2. SCI_ADDREFDOCUMENT and SCI_RELEASEDOCUMENT wrappers now use void* for the document parameter.
+         PJN / 03-05-2018 1. Verified the code works with the latest Scintilla v4.0.4. No new messages were added for this release of
+                          scintilla.
+         PJN / 14-07-2018 1. Fixed a number of C++ core guidelines compiler warnings. These changes mean that
+                          the code will now only compile on VC 2017 or later.
+                          2. Code page is now explicitly set to ANSI when building for ANSI. This is necessary because as of Scintilla 4 the
+                          default code page is now UTF-8. Thanks to Karagoez Yusuf for reporting this issue.
+                          3. CScintillaCtrl::SetProperty has been renamed SetScintillaProperty to avoid clashing with CWnd::SetProperty
+                          4. CScintillaCtrl::GetProperty has been renamed GetScintillaProperty to avoid clashing with CWnd::GetProperty
+                          5. Updated class to work with Scintilla v4.1.0. New messages wrapped include: SCI_GETDOCUMENTOPTIONS
+
+Copyright (c) 2004 - 2018 by PJ Naughter (Web: www.naughter.com, Email: pjna@naughter.com)
 
 All rights reserved.
 
@@ -231,11 +255,12 @@ to maintain a single distribution point for the source code.
 
 ////////////////////////////////// Implementation /////////////////////////////
 
+#pragma warning(suppress: 26433 26440)
 IMPLEMENT_DYNAMIC(CScintillaCtrl, CWnd)
 
-CScintillaCtrl::CScintillaCtrl() : m_DirectFunction(0),
-                                   m_DirectPointer(0),
-                                   m_bCallDirect(TRUE)
+CScintillaCtrl::CScintillaCtrl() noexcept : m_DirectFunction(0),
+                                            m_DirectPointer(0),
+                                            m_bCallDirect(TRUE)
 {
 }
 
@@ -248,9 +273,11 @@ BOOL CScintillaCtrl::Create(DWORD dwStyle, const RECT& rect, CWnd* pParentWnd, U
   //Setup the direct access data
   SetupDirectAccess();
 
-  //If we are running as Unicode, then use the UTF8 codepage
+  //If we are running as Unicode, then use the UTF8 codepage else use the ANSI codepage
 #ifdef _UNICODE
   SetCodePage(SC_CP_UTF8);
+#else
+  SetCodePage(0);
 #endif //#ifdef _UNICODE
 
   return TRUE;
@@ -263,28 +290,25 @@ void CScintillaCtrl::SetupDirectAccess()
   m_DirectPointer = GetDirectPointer();
 }
 
-BOOL CScintillaCtrl::GetCallDirect() const
+BOOL CScintillaCtrl::GetCallDirect() const noexcept
 {
   return m_bCallDirect;
 }
 
-void CScintillaCtrl::SetCallDirect(_In_ BOOL bDirect)
+void CScintillaCtrl::SetCallDirect(_In_ BOOL bDirect) noexcept
 {
   m_bCallDirect = bDirect;
 }
 
-CScintillaCtrl::~CScintillaCtrl()
-{
-  DestroyWindow();
-}
-
 inline LRESULT CScintillaCtrl::Call(_In_ UINT message, _In_ WPARAM wParam, _In_ LPARAM lParam)
 {
+  //Validate our parameters
   ASSERT(::IsWindow(m_hWnd)); //Window must be valid
 
   if (m_bCallDirect)
   {
     ASSERT(m_DirectFunction); //Direct function must be valid
+#pragma warning(suppress: 26490)
     return (reinterpret_cast<SciFnDirect>(m_DirectFunction))(m_DirectPointer, message, wParam, lParam);
   }
   else
@@ -313,18 +337,20 @@ CStringA CScintillaCtrl::W2UTF8(_In_NLS_string_(nLength) const wchar_t* pszText,
 
   //Now recall with the buffer to get the converted text
   CStringA sUTF;
-  char* pszUTF8Text = sUTF.GetBuffer(nUTF8Length + 1); //include an extra byte because we may be null terminating the string ourselves
+#pragma warning(suppress: 26429)
+  char* const pszUTF8Text = sUTF.GetBuffer(nUTF8Length + 1); //include an extra byte because we may be null terminating the string ourselves
   int nCharsWritten = WideCharToMultiByte(CP_UTF8, 0, pszText, nLength, pszUTF8Text, nUTF8Length, nullptr, nullptr);
   
   //Ensure we null terminate the text if WideCharToMultiByte doesn't do it for us
   if (nLength != -1)
   {
+#pragma warning(suppress: 26496)
     AFXASSUME(nCharsWritten <= nUTF8Length);
+#pragma warning(suppress: 26481)
     pszUTF8Text[nCharsWritten] = '\0';
   }
-  
   sUTF.ReleaseBuffer();
-  
+
   return sUTF;
 }
 
@@ -339,16 +365,18 @@ CStringW CScintillaCtrl::UTF82W(_In_NLS_string_(nLength) const char* pszText, _I
 
   //Now recall with the buffer to get the converted text
   CStringW sWideString;
+#pragma warning(suppress: 26429)
   wchar_t* pszWText = sWideString.GetBuffer(nWideLength + 1); //include an extra byte because we may be null terminating the string ourselves
   int nCharsWritten = MultiByteToWideChar(CP_UTF8, 0, pszText, nLength, pszWText, nWideLength);
   
   //Ensure we null terminate the text if MultiByteToWideChar doesn't do it for us
   if (nLength != -1)
   {
+#pragma warning(suppress: 26496)
     AFXASSUME(nCharsWritten <= nWideLength);
+#pragma warning(suppress: 26481)
     pszWText[nCharsWritten] = '\0';
   }
-  
   sWideString.ReleaseBuffer();
 
   return sWideString;
@@ -384,7 +412,7 @@ void CScintillaCtrl::ChangeInsertion(_In_ int length, _In_z_ const wchar_t* text
 CStringW CScintillaCtrl::GetSelText()
 {
   //Work out the length of string to allocate
-  int nUTF8Length = GetSelText(nullptr);
+  const int nUTF8Length = GetSelText(nullptr);
 
   //Call the function which does the work
   CStringA sUTF8;
@@ -398,7 +426,7 @@ CStringW CScintillaCtrl::GetSelText()
 CStringW CScintillaCtrl::GetCurLine()
 {
   //Work out the length of string to allocate
-  int nUTF8Length = GetCurLine(0, nullptr);
+  const int nUTF8Length = GetCurLine(0, nullptr);
 
   //Call the function which does the work
   CStringA sUTF8;
@@ -472,13 +500,13 @@ void CScintillaCtrl::UserListShow(_In_ int listType, _In_z_ const wchar_t* itemL
 CStringW CScintillaCtrl::GetLine(_In_ int line)
 {
   //Work out the length of string to allocate
-  int nUTF8Length = LineLength(line);
+  const int nUTF8Length = LineLength(line);
 
   //Call the function which does the work
   CStringA sUTF8;
   GetLine(line, sUTF8.GetBufferSetLength(nUTF8Length));
   sUTF8.ReleaseBuffer();
-  
+
   return UTF82W(sUTF8, -1);
 }
 
@@ -503,7 +531,7 @@ void CScintillaCtrl::SetText(_In_z_ const wchar_t* text)
 CStringW CScintillaCtrl::GetText(_In_ int length)
 {
   //Work out the length of string to allocate
-  int nUTF8Length = length*4; //A Unicode character can take up to 4 octets when expressed as UTF8
+  const int nUTF8Length = length*4; //A Unicode character can take up to 4 octets when expressed as UTF8
 
   //Call the function which does the work
   CStringA sUTF8;
@@ -606,14 +634,14 @@ void CScintillaCtrl::SetWhitespaceChars(_In_z_ const wchar_t* characters)
   SetWhitespaceChars(sUTF8);
 }
 
-void CScintillaCtrl::SetProperty(_In_z_ const wchar_t* key, _In_z_ const wchar_t* value)
+void CScintillaCtrl::SetScintillaProperty(_In_z_ const wchar_t* key, _In_z_ const wchar_t* value)
 {
   //Convert the unicode texts to UTF8
   CStringA sUTF8Key(W2UTF8(key, -1));
   CStringA sUTF8Value(W2UTF8(value, -1));
 
   //Call the native scintilla version of the function with the UTF8 text
-  SetProperty(sUTF8Key, sUTF8Value);
+  SetScintillaProperty(sUTF8Key, sUTF8Value);
 }
 
 void CScintillaCtrl::SetKeyWords(_In_ int keywordSet, _In_z_ const wchar_t* keyWords)
@@ -652,7 +680,7 @@ void CScintillaCtrl::LoadLexerLibrary(_In_z_ const wchar_t* path)
   LoadLexerLibrary(sUTF8);
 }
 
-CStringW CScintillaCtrl::GetProperty(_In_z_ const wchar_t* key)
+CStringW CScintillaCtrl::GetScintillaProperty(_In_z_ const wchar_t* key)
 {
   //Validate our parameters
   ASSERT(key);
@@ -661,11 +689,11 @@ CStringW CScintillaCtrl::GetProperty(_In_z_ const wchar_t* key)
   CStringA sUTF8Key(W2UTF8(key, -1));
 
   //Work out the length of string to allocate
-  int nUTF8ValueLength = GetProperty(sUTF8Key, 0);
+  const int nUTF8ValueLength = GetScintillaProperty(sUTF8Key, 0);
 
   //Call the function which does the work
   CStringA sUTF8Value;
-  GetProperty(sUTF8Key, sUTF8Value.GetBufferSetLength(nUTF8ValueLength));
+  GetScintillaProperty(sUTF8Key, sUTF8Value.GetBufferSetLength(nUTF8ValueLength));
   sUTF8Value.ReleaseBuffer();
 
   return UTF82W(sUTF8Value, -1);
@@ -680,14 +708,14 @@ CStringW CScintillaCtrl::GetPropertyExpanded(_In_z_ const wchar_t* key)
   CStringA sUTF8Key(W2UTF8(key, -1));
 
   //Work out the length of string to allocate
-  int nUTF8ValueLength = GetPropertyExpanded(sUTF8Key, 0);
+  const int nUTF8ValueLength = GetPropertyExpanded(sUTF8Key, 0);
 
   //Call the function which does the work
   CStringA sUTF8Value;
   GetPropertyExpanded(sUTF8Key, sUTF8Value.GetBufferSetLength(nUTF8ValueLength));
   sUTF8Value.ReleaseBuffer();
 
-  return UTF82W(sUTF8Value, -1);  
+  return UTF82W(sUTF8Value, -1);
 }
 
 int CScintillaCtrl::GetPropertyInt(_In_z_ const wchar_t* key, _In_ int defaultValue)
@@ -703,15 +731,11 @@ CStringW CScintillaCtrl::StyleGetFont(_In_ int style)
 {
   //Allocate a UTF8 buffer to contain the font name. See the notes for
   //SCI_STYLEGETFONT / SCI_STYLESETFONT on the reasons why we can use
-  //a statically sized buffer of 32 characters in size. Note it is 33 below
-  //to include space for the null terminator
-  char szUTF8FontName[33*4]; //A Unicode character can take up to 4 octets when expressed as UTF8
-  szUTF8FontName[0] = '\0';
-
-  //Call the native scintilla version of the function with a UTF8 text buffer
-  StyleGetFont(style, szUTF8FontName);
-
-  return UTF82W(szUTF8FontName, -1);
+  //a statically sized buffer of 32 characters in size
+  CStringA sUTF8FontName;
+  StyleGetFont(style, sUTF8FontName.GetBuffer(32*4));
+  sUTF8FontName.ReleaseBuffer();
+  return UTF82W(sUTF8FontName, -1);
 }
 
 void CScintillaCtrl::MarginSetText(_In_ int line, _In_z_ const wchar_t* text)
@@ -723,15 +747,6 @@ void CScintillaCtrl::MarginSetText(_In_ int line, _In_z_ const wchar_t* text)
   MarginSetText(line, sUTF8);
 }
 
-void CScintillaCtrl::MarginSetStyles(_In_ int line, _In_z_ const wchar_t* styles)
-{
-  //Convert the unicode text to UTF8
-  CStringA sUTF8(W2UTF8(styles, -1));
-
-  //Call the native scintilla version of the function with the UTF8 text
-  MarginSetStyles(line, sUTF8);
-}
-
 void CScintillaCtrl::AnnotationSetText(_In_ int line, _In_z_ const wchar_t* text)
 {
   //Convert the unicode text to UTF8
@@ -741,19 +756,10 @@ void CScintillaCtrl::AnnotationSetText(_In_ int line, _In_z_ const wchar_t* text
   AnnotationSetText(line, sUTF8);
 }
 
-void CScintillaCtrl::AnnotationSetStyles(_In_ int line, _In_z_ const wchar_t* styles)
-{
-  //Convert the unicode text to UTF8
-  CStringA sUTF8(W2UTF8(styles, -1));
-
-  //Call the native scintilla version of the function with the UTF8 text
-  AnnotationSetStyles(line, sUTF8);
-}
-
 CStringW CScintillaCtrl::AutoCGetCurrentText()
 {
   //Work out the length of string to allocate
-  int nUTF8Length = AutoCGetCurrentText(nullptr);
+    const int nUTF8Length = AutoCGetCurrentText(nullptr);
 
   //Call the function which does the work
   CStringA sUTF8;
@@ -767,7 +773,7 @@ CStringW CScintillaCtrl::AutoCGetCurrentText()
 CStringW CScintillaCtrl::GetLexerLanguage()
 {
   //Work out the length of string to allocate
-  int nUTF8Length = GetLexerLanguage(nullptr);
+  const int nUTF8Length = GetLexerLanguage(nullptr);
 
   //Call the function which does the work
   CStringA sUTF8;
@@ -781,7 +787,7 @@ CStringW CScintillaCtrl::GetLexerLanguage()
 CStringW CScintillaCtrl::PropertyNames()
 {
   //Work out the length of string to allocate
-  int nUTF8Length = PropertyNames(nullptr);
+  const int nUTF8Length = PropertyNames(nullptr);
 
   //Call the function which does the work
   CStringA sUTF8;
@@ -816,7 +822,7 @@ CStringW CScintillaCtrl::DescribeProperty(_In_z_ const wchar_t* name)
   CStringA sUTF8KName(W2UTF8(name, -1));
 
   //Work out the length of string to allocate
-  int nUTF8Length = DescribeProperty(sUTF8KName, nullptr);
+  const int nUTF8Length = DescribeProperty(sUTF8KName, nullptr);
 
   //Call the function which does the work
   CStringA sUTF8;
@@ -830,7 +836,7 @@ CStringW CScintillaCtrl::DescribeProperty(_In_z_ const wchar_t* name)
 CStringW CScintillaCtrl::DescribeKeyWordSets()
 {
   //Work out the length of string to allocate
-  int nUTF8Length = DescribeKeyWordSets(nullptr);
+  const int nUTF8Length = DescribeKeyWordSets(nullptr);
 
   //Call the function which does the work
   CStringA sUTF8;
@@ -844,20 +850,20 @@ CStringW CScintillaCtrl::DescribeKeyWordSets()
 CStringW CScintillaCtrl::GetTag(_In_ int tagNumber)
 {
   //Work out the length of string to allocate
-  int nUTF8Length = GetTag(tagNumber, nullptr);
+  const int nUTF8Length = GetTag(tagNumber, nullptr);
 
   //Call the function which does the work
   CStringA sUTF8;
   GetTag(tagNumber, sUTF8.GetBufferSetLength(nUTF8Length));
   sUTF8.ReleaseBuffer();
-  
+
   return UTF82W(sUTF8, -1);
 }
 
 CStringW CScintillaCtrl::GetWordChars()
 {
   //Work out the length of string to allocate
-  int nValueLength = GetWordChars(nullptr);
+  const int nValueLength = GetWordChars(nullptr);
 
   //Call the function which does the work
   CStringA sUTF8;
@@ -870,7 +876,7 @@ CStringW CScintillaCtrl::GetWordChars()
 CStringW CScintillaCtrl::GetWhitespaceChars()
 {
   //Work out the length of string to allocate
-  int nValueLength = GetWhitespaceChars(nullptr);
+  const int nValueLength = GetWhitespaceChars(nullptr);
 
   //Call the function which does the work
   CStringA sUTF8;
@@ -883,7 +889,7 @@ CStringW CScintillaCtrl::GetWhitespaceChars()
 CStringW CScintillaCtrl::GetPunctuationChars()
 {
   //Work out the length of string to allocate
-  int nValueLength = GetPunctuationChars(nullptr);
+  const int nValueLength = GetPunctuationChars(nullptr);
 
   //Call the function which does the work
   CStringA sUTF8;
@@ -896,7 +902,7 @@ CStringW CScintillaCtrl::GetPunctuationChars()
 CStringW CScintillaCtrl::GetTargetText()
 {
   //Work out the length of string to allocate
-  int nValueLength = GetTargetText(nullptr);
+  const int nValueLength = GetTargetText(nullptr);
 
   //Call the function which does the work
   CStringA sUTF8;
@@ -906,12 +912,51 @@ CStringW CScintillaCtrl::GetTargetText()
   return UTF82W(sUTF8, -1);
 }
 
+CStringW CScintillaCtrl::NameOfStyle(_In_ int style)
+{
+  //Work out the length of string to allocate
+  const int nUTF8ValueLength = NameOfStyle(style, nullptr);
+
+  //Call the function which does the work
+  CStringA sUTF8Value;
+  NameOfStyle(style, sUTF8Value.GetBufferSetLength(nUTF8ValueLength));
+  sUTF8Value.ReleaseBuffer();
+
+  return UTF82W(sUTF8Value, -1);
+}
+
+CStringW CScintillaCtrl::TagsOfStyle(_In_ int style)
+{
+  //Work out the length of string to allocate
+  const int nUTF8ValueLength = TagsOfStyle(style, nullptr);
+
+  //Call the function which does the work
+  CStringA sUTF8Value;
+  TagsOfStyle(style, sUTF8Value.GetBufferSetLength(nUTF8ValueLength));
+  sUTF8Value.ReleaseBuffer();
+
+  return UTF82W(sUTF8Value, -1);
+}
+
+CStringW CScintillaCtrl::DescriptionOfStyle(_In_ int style)
+{
+  //Work out the length of string to allocate
+  const int nUTF8ValueLength = DescriptionOfStyle(style, nullptr);
+
+  //Call the function which does the work
+  CStringA sUTF8Value;
+  DescriptionOfStyle(style, sUTF8Value.GetBufferSetLength(nUTF8ValueLength));
+  sUTF8Value.ReleaseBuffer();
+
+  return UTF82W(sUTF8Value, -1);
+}
+
 #else
 
 CStringA CScintillaCtrl::GetSelText()
 {
   //Work out the length of string to allocate
-  int nLength = GetSelText(nullptr);
+  const int nLength = GetSelText(nullptr);
 
   //Call the function which does the work
   CStringA sSelText;
@@ -924,11 +969,10 @@ CStringA CScintillaCtrl::GetCurLine()
 {
   //Call the function which does the work
   CStringA sCurLine;
-  int nLength = GetCurLine(0, nullptr);
+  const int nLength = GetCurLine(0, nullptr);
   char* pszCurLine = sCurLine.GetBufferSetLength(nLength);
   GetCurLine(nLength, pszCurLine);
   sCurLine.ReleaseBuffer();
-  
   return sCurLine;
 }
 
@@ -936,25 +980,24 @@ CStringA CScintillaCtrl::GetLine(_In_ int line)
 {
   //Call the function which does the work
   CStringA sLine;
-  int nLength = LineLength(line);
+  const int nLength = LineLength(line);
   char* pszLine = sLine.GetBufferSetLength(nLength);
   GetLine(line, pszLine);
   sLine.ReleaseBuffer();
-  
   return sLine;
 }
 
-CStringA CScintillaCtrl::GetProperty(_In_z_ const char* key)
+CStringA CScintillaCtrl::GetScintillaProperty(_In_z_ const char* key)
 {
   //Validate our parameters
   ASSERT(key);
 
   //Work out the length of string to allocate
-  int nValueLength = GetProperty(key, nullptr);
+  const int nValueLength = GetScintillaProperty(key, nullptr);
 
   //Call the function which does the work
   CStringA sValue;
-  GetProperty(key, sValue.GetBufferSetLength(nValueLength));
+  GetScintillaProperty(key, sValue.GetBufferSetLength(nValueLength));
   sValue.ReleaseBuffer();
 
   return sValue;
@@ -976,35 +1019,31 @@ CStringA CScintillaCtrl::GetPropertyExpanded(_In_z_ const char* key)
   ASSERT(key);
 
   //Work out the length of string to allocate
-  int nValueLength = GetPropertyExpanded(key, nullptr);
+  const int nValueLength = GetPropertyExpanded(key, nullptr);
 
   //Call the function which does the work
   CStringA sValue;
   GetPropertyExpanded(key, sValue.GetBufferSetLength(nValueLength));
   sValue.ReleaseBuffer();
 
-  return sValue;  
+  return sValue;
 }
 
 CStringA CScintillaCtrl::StyleGetFont(_In_ int style)
 {
   //Allocate a buffer to contain the font name. See the notes for
   //SCI_STYLEGETFONT / SCI_STYLESETFONT on the reasons why we can use
-  //a statically sized buffer of 32 characters in size. Note it is 33 below
-  //to include space for the null terminator
-  char szFontName[33];
-  szFontName[0] = '\0';
-
-  //Call the native scintilla version of the function with a text buffer
-  StyleGetFont(style, szFontName);
-
-  return szFontName;
+  //a statically sized buffer of 32 characters in size
+  CStringA sFontName;
+  StyleGetFont(style, sFontName.GetBuffer(32));
+  sFontName.ReleaseBuffer();
+  return sFontName;
 }
 
 CStringA CScintillaCtrl::AutoCGetCurrentText()
 {
   //Work out the length of string to allocate
-  int nLength = AutoCGetCurrentText(nullptr);
+  const int nLength = AutoCGetCurrentText(nullptr);
 
   //Call the function which does the work
   CStringA sText;
@@ -1017,7 +1056,7 @@ CStringA CScintillaCtrl::AutoCGetCurrentText()
 CStringA CScintillaCtrl::GetLexerLanguage()
 {
   //Work out the length of string to allocate
-  int nValueLength = GetLexerLanguage(nullptr);
+  const int nValueLength = GetLexerLanguage(nullptr);
 
   //Call the function which does the work
   CStringA sLanguage;
@@ -1030,7 +1069,7 @@ CStringA CScintillaCtrl::GetLexerLanguage()
 CStringA CScintillaCtrl::PropertyNames()
 {
   //Work out the length of string to allocate
-  int nValueLength = PropertyNames(nullptr);
+  const int nValueLength = PropertyNames(nullptr);
 
   //Call the function which does the work
   CStringA sPropertyNames;
@@ -1043,7 +1082,7 @@ CStringA CScintillaCtrl::PropertyNames()
 CStringA CScintillaCtrl::DescribeProperty(_In_z_ const char* name)
 {
   //Work out the length of string to allocate
-  int nValueLength = DescribeProperty(name, nullptr);
+  const int nValueLength = DescribeProperty(name, nullptr);
 
   //Call the function which does the work
   CStringA sDescribeProperty;
@@ -1056,7 +1095,7 @@ CStringA CScintillaCtrl::DescribeProperty(_In_z_ const char* name)
 CStringA CScintillaCtrl::DescribeKeyWordSets()
 {
   //Work out the length of string to allocate
-  int nValueLength = DescribeKeyWordSets(nullptr);
+  const int nValueLength = DescribeKeyWordSets(nullptr);
 
   //Call the function which does the work
   CStringA sDescribeKeyWordSets;
@@ -1069,7 +1108,7 @@ CStringA CScintillaCtrl::DescribeKeyWordSets()
 CStringA CScintillaCtrl::GetTag(_In_ int tagNumber)
 {
   //Work out the length of string to allocate
-  int nValueLength = GetTag(tagNumber, nullptr);
+  const int nValueLength = GetTag(tagNumber, nullptr);
 
   //Call the function which does the work
   CStringA sTag;
@@ -1082,7 +1121,7 @@ CStringA CScintillaCtrl::GetTag(_In_ int tagNumber)
 CStringA CScintillaCtrl::GetWordChars()
 {
   //Work out the length of string to allocate
-  int nValueLength = GetWordChars(nullptr);
+  const int nValueLength = GetWordChars(nullptr);
 
   //Call the function which does the work
   CStringA sWordChars;
@@ -1095,7 +1134,7 @@ CStringA CScintillaCtrl::GetWordChars()
 CStringA CScintillaCtrl::GetWhitespaceChars()
 {
   //Work out the length of string to allocate
-  int nValueLength = GetWhitespaceChars(nullptr);
+  const int nValueLength = GetWhitespaceChars(nullptr);
 
   //Call the function which does the work
   CStringA sWhitespaceChars;
@@ -1108,7 +1147,7 @@ CStringA CScintillaCtrl::GetWhitespaceChars()
 CStringA CScintillaCtrl::GetPunctuationChars()
 {
   //Work out the length of string to allocate
-  int nValueLength = GetPunctuationChars(nullptr);
+  const int nValueLength = GetPunctuationChars(nullptr);
 
   //Call the function which does the work
   CStringA sPunctuationChars;
@@ -1121,7 +1160,7 @@ CStringA CScintillaCtrl::GetPunctuationChars()
 CStringA CScintillaCtrl::GetTargetText()
 {
   //Work out the length of string to allocate
-  int nValueLength = GetTargetText(nullptr);
+  const int nValueLength = GetTargetText(nullptr);
 
   //Call the function which does the work
   CStringA sTargetText;
@@ -1130,11 +1169,50 @@ CStringA CScintillaCtrl::GetTargetText()
 
   return sTargetText;
 }
+
+CStringA CScintillaCtrl::NameOfStyle(_In_ int style)
+{
+  //Work out the length of string to allocate
+  const int nValueLength = NameOfStyle(style, nullptr);
+
+  //Call the function which does the work
+  CStringA sValue;
+  NameOfStyle(style, sValue.GetBufferSetLength(nValueLength));
+  sValue.ReleaseBuffer();
+
+  return sValue;
+}
+
+CStringA CScintillaCtrl::TagsOfStyle(_In_ int style)
+{
+  //Work out the length of string to allocate
+  const int nValueLength = TagsOfStyle(style, nullptr);
+
+  //Call the function which does the work
+  CStringA sValue;
+  TagsOfStyle(style, sValue.GetBufferSetLength(nValueLength));
+  sValue.ReleaseBuffer();
+
+  return sValue;
+}
+
+CStringA CScintillaCtrl::DescriptionOfStyle(_In_ int style)
+{
+  //Work out the length of string to allocate
+  const int nValueLength = DescriptionOfStyle(style, nullptr);
+
+  //Call the function which does the work
+  CStringA sValue;
+  DescriptionOfStyle(style, sValue.GetBufferSetLength(nValueLength));
+  sValue.ReleaseBuffer();
+
+  return sValue;
+}
 #endif //#ifdef _UNICODE
 
 
-//Everything else after this point was auto generated using the "ConvertScintillaiface.js" script
-
+#pragma warning(push)
+#pragma warning(disable : 26461 26472 26490)
 void CScintillaCtrl::AddText(_In_ int length, _In_reads_bytes_(length) const char* text)
 {
   Call(SCI_ADDTEXT, static_cast<WPARAM>(length), reinterpret_cast<LPARAM>(text));
@@ -1830,16 +1908,6 @@ int CScintillaCtrl::GetWhitespaceSize()
   return static_cast<int>(Call(SCI_GETWHITESPACESIZE, 0, 0));
 }
 
-void CScintillaCtrl::SetStyleBits(_In_ int bits)
-{
-  Call(SCI_SETSTYLEBITS, static_cast<WPARAM>(bits), 0);
-}
-
-int CScintillaCtrl::GetStyleBits()
-{
-  return static_cast<int>(Call(SCI_GETSTYLEBITS, 0, 0));
-}
-
 void CScintillaCtrl::SetLineState(_In_ int line, _In_ int state)
 {
   Call(SCI_SETLINESTATE, static_cast<WPARAM>(line), static_cast<LPARAM>(state));
@@ -1873,6 +1941,16 @@ COLORREF CScintillaCtrl::GetCaretLineBack()
 void CScintillaCtrl::SetCaretLineBack(_In_ COLORREF back)
 {
   Call(SCI_SETCARETLINEBACK, static_cast<WPARAM>(back), 0);
+}
+
+int CScintillaCtrl::GetCaretLineFrame()
+{
+  return static_cast<int>(Call(SCI_GETCARETLINEFRAME, 0, 0));
+}
+
+void CScintillaCtrl::SetCaretLineFrame(_In_ int width)
+{
+  Call(SCI_SETCARETLINEFRAME, static_cast<WPARAM>(width), 0);
 }
 
 void CScintillaCtrl::StyleSetChangeable(_In_ int style, _In_ BOOL changeable)
@@ -2780,16 +2858,6 @@ void CScintillaCtrl::AppendText(_In_ int length, _In_reads_bytes_(length) const 
   Call(SCI_APPENDTEXT, static_cast<WPARAM>(length), reinterpret_cast<LPARAM>(text));
 }
 
-BOOL CScintillaCtrl::GetTwoPhaseDraw()
-{
-  return static_cast<BOOL>(Call(SCI_GETTWOPHASEDRAW, 0, 0));
-}
-
-void CScintillaCtrl::SetTwoPhaseDraw(_In_ BOOL twoPhase)
-{
-  Call(SCI_SETTWOPHASEDRAW, static_cast<WPARAM>(twoPhase), 0);
-}
-
 int CScintillaCtrl::GetPhasesDraw()
 {
   return static_cast<int>(Call(SCI_GETPHASESDRAW, 0, 0));
@@ -2848,6 +2916,16 @@ void CScintillaCtrl::SetFoldMarginColour(_In_ BOOL useSetting, _In_ COLORREF bac
 void CScintillaCtrl::SetFoldMarginHiColour(_In_ BOOL useSetting, _In_ COLORREF fore)
 {
   Call(SCI_SETFOLDMARGINHICOLOUR, static_cast<WPARAM>(useSetting), static_cast<LPARAM>(fore));
+}
+
+void CScintillaCtrl::SetAccessibility(_In_ int accessibility)
+{
+  Call(SCI_SETACCESSIBILITY, static_cast<WPARAM>(accessibility), 0);
+}
+
+int CScintillaCtrl::GetAccessibility()
+{
+  return static_cast<int>(Call(SCI_GETACCESSIBILITY, 0, 0));
 }
 
 void CScintillaCtrl::LineDown()
@@ -3053,6 +3131,11 @@ void CScintillaCtrl::LineDelete()
 void CScintillaCtrl::LineTranspose()
 {
   Call(SCI_LINETRANSPOSE, 0, 0);
+}
+
+void CScintillaCtrl::LineReverse()
+{
+  Call(SCI_LINEREVERSE, 0, 0);
 }
 
 void CScintillaCtrl::LineDuplicate()
@@ -3280,19 +3363,24 @@ int CScintillaCtrl::GetZoom()
   return static_cast<int>(Call(SCI_GETZOOM, 0, 0));
 }
 
-int CScintillaCtrl::CreateDocument()
+void* CScintillaCtrl::CreateDocument(_In_ int bytes, _In_ int documentOptions)
 {
-  return static_cast<int>(Call(SCI_CREATEDOCUMENT, 0, 0));
+  return reinterpret_cast<void*>(Call(SCI_CREATEDOCUMENT, static_cast<WPARAM>(bytes), static_cast<LPARAM>(documentOptions)));
 }
 
-void CScintillaCtrl::AddRefDocument(_In_ int doc)
+void CScintillaCtrl::AddRefDocument(_In_ void* doc)
 {
-  Call(SCI_ADDREFDOCUMENT, 0, static_cast<LPARAM>(doc));
+  Call(SCI_ADDREFDOCUMENT, 0, reinterpret_cast<LPARAM>(doc));
 }
 
-void CScintillaCtrl::ReleaseDocument(_In_ int doc)
+void CScintillaCtrl::ReleaseDocument(_In_ void* doc)
 {
-  Call(SCI_RELEASEDOCUMENT, 0, static_cast<LPARAM>(doc));
+  Call(SCI_RELEASEDOCUMENT, 0, reinterpret_cast<LPARAM>(doc));
+}
+
+int CScintillaCtrl::GetDocumentOptions()
+{
+  return static_cast<int>(Call(SCI_GETDOCUMENTOPTIONS, 0, 0));
 }
 
 int CScintillaCtrl::GetModEventMask()
@@ -3528,6 +3616,11 @@ void CScintillaCtrl::SetSelectionMode(_In_ int selectionMode)
 int CScintillaCtrl::GetSelectionMode()
 {
   return static_cast<int>(Call(SCI_GETSELECTIONMODE, 0, 0));
+}
+
+BOOL CScintillaCtrl::GetMoveExtendsSelection()
+{
+  return static_cast<BOOL>(Call(SCI_GETMOVEEXTENDSSELECTION, 0, 0));
 }
 
 Sci_Position CScintillaCtrl::GetLineSelStartPosition(_In_ int line)
@@ -4370,9 +4463,9 @@ int CScintillaCtrl::GetTechnology()
   return static_cast<int>(Call(SCI_GETTECHNOLOGY, 0, 0));
 }
 
-int CScintillaCtrl::CreateLoader(_In_ int bytes)
+void* CScintillaCtrl::CreateLoader(_In_ int bytes, _In_ int documentOptions)
 {
-  return static_cast<int>(Call(SCI_CREATELOADER, static_cast<WPARAM>(bytes), 0));
+  return reinterpret_cast<void*>(Call(SCI_CREATELOADER, static_cast<WPARAM>(bytes), static_cast<LPARAM>(documentOptions)));
 }
 
 void CScintillaCtrl::FindIndicatorShow(_In_ Sci_Position start, _In_ Sci_Position end)
@@ -4465,7 +4558,7 @@ void CScintillaCtrl::Colourise(_In_ Sci_Position start, _In_ Sci_Position end)
   Call(SCI_COLOURISE, static_cast<WPARAM>(start), static_cast<LPARAM>(end));
 }
 
-void CScintillaCtrl::SetProperty(_In_z_ const char* key, _In_z_ const char* value)
+void CScintillaCtrl::SetScintillaProperty(_In_z_ const char* key, _In_z_ const char* value)
 {
   Call(SCI_SETPROPERTY, reinterpret_cast<WPARAM>(key), reinterpret_cast<LPARAM>(value));
 }
@@ -4485,7 +4578,7 @@ void CScintillaCtrl::LoadLexerLibrary(_In_z_ const char* path)
   Call(SCI_LOADLEXERLIBRARY, 0, reinterpret_cast<LPARAM>(path));
 }
 
-int CScintillaCtrl::GetProperty(_In_z_ const char* key, _Inout_opt_ char* value)
+int CScintillaCtrl::GetScintillaProperty(_In_z_ const char* key, _Inout_opt_ char* value)
 {
   return static_cast<int>(Call(SCI_GETPROPERTY, reinterpret_cast<WPARAM>(key), reinterpret_cast<LPARAM>(value)));
 }
@@ -4498,11 +4591,6 @@ int CScintillaCtrl::GetPropertyExpanded(_In_z_ const char* key, _Inout_opt_ char
 int CScintillaCtrl::GetPropertyInt(_In_z_ const char* key, _In_ int defaultValue)
 {
   return static_cast<int>(Call(SCI_GETPROPERTYINT, reinterpret_cast<WPARAM>(key), defaultValue));
-}
-
-int CScintillaCtrl::GetStyleBitsNeeded()
-{
-  return static_cast<int>(Call(SCI_GETSTYLEBITSNEEDED, 0, 0));
 }
 
 int CScintillaCtrl::GetLexerLanguage(_Inout_opt_ char* language)
@@ -4585,3 +4673,33 @@ int CScintillaCtrl::GetSubStyleBases(_Inout_z_ char* styles)
   return static_cast<int>(Call(SCI_GETSUBSTYLEBASES, 0, reinterpret_cast<LPARAM>(styles)));
 }
 
+int CScintillaCtrl::GetNamedStyles()
+{
+  return static_cast<int>(Call(SCI_GETNAMEDSTYLES, 0, 0));
+}
+
+int CScintillaCtrl::NameOfStyle(_In_ int style, _Inout_opt_ char* name)
+{
+  return static_cast<int>(Call(SCI_NAMEOFSTYLE, static_cast<WPARAM>(style), reinterpret_cast<LPARAM>(name)));
+}
+
+int CScintillaCtrl::TagsOfStyle(_In_ int style, _Inout_opt_ char* tags)
+{
+  return static_cast<int>(Call(SCI_TAGSOFSTYLE, static_cast<WPARAM>(style), reinterpret_cast<LPARAM>(tags)));
+}
+
+int CScintillaCtrl::DescriptionOfStyle(_In_ int style, _Inout_opt_ char* description)
+{
+  return static_cast<int>(Call(SCI_DESCRIPTIONOFSTYLE, static_cast<WPARAM>(style), reinterpret_cast<LPARAM>(description)));
+}
+
+int CScintillaCtrl::GetBidirectional()
+{
+  return static_cast<int>(Call(SCI_GETBIDIRECTIONAL, 0, 0));
+}
+
+void CScintillaCtrl::SetBidirectional(_In_ int bidirectional)
+{
+  Call(SCI_SETBIDIRECTIONAL, static_cast<WPARAM>(bidirectional), 0);
+}
+#pragma warning(pop)

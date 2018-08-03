@@ -9,7 +9,7 @@
 #endif
 
 
-const TCHAR cppKeyWords[] = 
+const TCHAR* g_cppKeyWords = 
   _T("and and_eq asm auto bitand bitor bool break ")
   _T("case catch char class compl const const_cast continue ")
   _T("default delete do double dynamic_cast else enum explicit export extern false float for ")
@@ -20,8 +20,10 @@ const TCHAR cppKeyWords[] =
   _T("virtual void volatile wchar_t while xor xor_eq ");
 
 
+#pragma warning(suppress: 26409 26433 26440)
 IMPLEMENT_DYNCREATE(CScintillaDemoView, CScintillaView)
 
+#pragma warning(suppress: 26433 26440)
 BEGIN_MESSAGE_MAP(CScintillaDemoView, CScintillaView)
   ON_COMMAND(ID_OPTIONS_ADDMARKER, &CScintillaDemoView::OnOptionsAddmarker)
   ON_COMMAND(ID_OPTIONS_DELETEMARKER, &CScintillaDemoView::OnOptionsDeletemarker)
@@ -43,6 +45,7 @@ BEGIN_MESSAGE_MAP(CScintillaDemoView, CScintillaView)
 END_MESSAGE_MAP()
 
 
+#pragma warning(suppress: 26439)
 CScintillaDemoView::CScintillaDemoView()
 {
   LoadMarginSettings();
@@ -50,28 +53,18 @@ CScintillaDemoView::CScintillaDemoView()
 
 void CScintillaDemoView::OnDraw(CDC* /*pDC*/)
 {
-  CScintillaDemoDoc* pDoc = GetDocument();
+  const CScintillaDemoDoc* pDoc = GetDocument();
   ASSERT_VALID(pDoc);
-  pDoc; //To get rid of unused variable compiler warning
+  UNREFERENCED_PARAMETER(pDoc);
 }
 
-#ifdef _DEBUG
-void CScintillaDemoView::AssertValid() const
-{
-  CScintillaView::AssertValid();
-}
-
-void CScintillaDemoView::Dump(CDumpContext& dc) const
-{
-  CScintillaView::Dump(dc);
-}
-
-CScintillaDemoDoc* CScintillaDemoView::GetDocument() //non-debug version is inline
+#pragma warning(suppress: 26434 26440)
+CScintillaDemoDoc* CScintillaDemoView::GetDocument()
 {
   ASSERT(m_pDocument->IsKindOf(RUNTIME_CLASS(CScintillaDemoDoc)));
+#pragma warning(suppress: 26466)
   return static_cast<CScintillaDemoDoc*>(m_pDocument);
 }
-#endif //_DEBUG
 
 void CScintillaDemoView::SetAStyle(int style, COLORREF fore, COLORREF back, int size, const char* face) 
 {
@@ -97,13 +90,13 @@ void CScintillaDemoView::DefineMarker(int marker, int markerType, COLORREF fore,
 void CScintillaDemoView::OnInitialUpdate() 
 {
   //Let the base class do its thing
-  CScintillaView::OnInitialUpdate();
-  
+  __super::OnInitialUpdate();
+
   CScintillaCtrl& rCtrl = GetCtrl();
 
   //Setup the Lexer
   rCtrl.SetLexer(SCLEX_CPP);
-  rCtrl.SetKeyWords(0, cppKeyWords);
+  rCtrl.SetKeyWords(0, g_cppKeyWords);
 
   //Setup styles
   SetAStyle(STYLE_DEFAULT, RGB(0, 0, 0), RGB(0xff, 0xff, 0xff), 11, "Verdana");
@@ -128,7 +121,7 @@ void CScintillaDemoView::OnInitialUpdate()
   rCtrl.SetMarginSensitiveN(2, TRUE);
   rCtrl.SetMarginTypeN(2, SC_MARGIN_SYMBOL);
   rCtrl.SetMarginMaskN(2, SC_MASK_FOLDERS);
-  rCtrl.SetProperty(_T("fold"), _T("1"));
+  rCtrl.SetScintillaProperty(_T("fold"), _T("1"));
 
   //Setup markers
   DefineMarker(SC_MARKNUM_FOLDEROPEN, SC_MARK_MINUS, RGB(0xff, 0xff, 0xff), RGB(0, 0, 0xFF));
@@ -153,109 +146,115 @@ void CScintillaDemoView::OnInitialUpdate()
 #endif
 }
 
-void CScintillaDemoView::OnOptionsAddmarker() 
+void CScintillaDemoView::OnOptionsAddmarker()
 {
   CScintillaCtrl& rCtrl = GetCtrl();
-  Sci_Position nPos = rCtrl.GetCurrentPos();
-  int nLine = rCtrl.LineFromPosition(nPos);
+  const Sci_Position nPos = rCtrl.GetCurrentPos();
+  const int nLine = rCtrl.LineFromPosition(nPos);
   rCtrl.MarkerAdd(nLine, 0);
 }
 
-void CScintillaDemoView::OnUpdateOptionsAddmarker(CCmdUI* pCmdUI) 
+#pragma warning(suppress: 26429)
+void CScintillaDemoView::OnUpdateOptionsAddmarker(CCmdUI* pCmdUI)
 {
   CScintillaCtrl& rCtrl = GetCtrl();
-  Sci_Position nPos = rCtrl.GetCurrentPos();
-  int nLine = rCtrl.LineFromPosition(nPos);
-  int nBits = rCtrl.MarkerGet(nLine);
-  pCmdUI->Enable((nBits & 0x1) == 0);	
+  const Sci_Position nPos = rCtrl.GetCurrentPos();
+  const int nLine = rCtrl.LineFromPosition(nPos);
+  const int nBits = rCtrl.MarkerGet(nLine);
+  pCmdUI->Enable((nBits & 0x1) == 0);
 }
 
-void CScintillaDemoView::OnOptionsDeletemarker() 
+void CScintillaDemoView::OnOptionsDeletemarker()
 {
   CScintillaCtrl& rCtrl = GetCtrl();
-  Sci_Position nPos = rCtrl.GetCurrentPos();
-  int nLine = rCtrl.LineFromPosition(nPos);
+  const Sci_Position nPos = rCtrl.GetCurrentPos();
+  const int nLine = rCtrl.LineFromPosition(nPos);
   rCtrl.MarkerDelete(nLine, 0);
 }
 
-void CScintillaDemoView::OnUpdateOptionsDeletemarker(CCmdUI* pCmdUI) 
+#pragma warning(suppress: 26429)
+void CScintillaDemoView::OnUpdateOptionsDeletemarker(CCmdUI* pCmdUI)
 {
   CScintillaCtrl& rCtrl = GetCtrl();
-  Sci_Position nPos = rCtrl.GetCurrentPos();
-  int nLine = rCtrl.LineFromPosition(nPos);
-  int nBits = rCtrl.MarkerGet(nLine);
+  const Sci_Position nPos = rCtrl.GetCurrentPos();
+  const int nLine = rCtrl.LineFromPosition(nPos);
+  const int nBits = rCtrl.MarkerGet(nLine);
   pCmdUI->Enable(nBits & 0x1);	
 }
 
-void CScintillaDemoView::OnOptionsFindNextmarker() 
+void CScintillaDemoView::OnOptionsFindNextmarker()
 {
   CScintillaCtrl& rCtrl = GetCtrl();
-  Sci_Position nPos = rCtrl.GetCurrentPos();
-  int nLine = rCtrl.LineFromPosition(nPos);
-  int nFoundLine = rCtrl.MarkerNext(nLine + 1, 0x1);
+  const Sci_Position nPos = rCtrl.GetCurrentPos();
+  const int nLine = rCtrl.LineFromPosition(nPos);
+  const int nFoundLine = rCtrl.MarkerNext(nLine + 1, 0x1);
   if (nFoundLine >= 0)
     rCtrl.GotoLine(nFoundLine);
   else
     MessageBeep(MB_ICONHAND);
 }
 
-void CScintillaDemoView::OnOptionsFindPrevmarker() 
+void CScintillaDemoView::OnOptionsFindPrevmarker()
 {
   CScintillaCtrl& rCtrl = GetCtrl();
-  Sci_Position nPos = rCtrl.GetCurrentPos();
-  int nLine = rCtrl.LineFromPosition(nPos);
-  int nFoundLine = rCtrl.MarkerPrevious(nLine - 1, 0x1);
+  const Sci_Position nPos = rCtrl.GetCurrentPos();
+  const int nLine = rCtrl.LineFromPosition(nPos);
+  const int nFoundLine = rCtrl.MarkerPrevious(nLine - 1, 0x1);
   if (nFoundLine >= 0)
     rCtrl.GotoLine(nFoundLine);
   else
     MessageBeep(MB_ICONHAND);
 }
 
-void CScintillaDemoView::OnOptionsFoldMargin() 
+void CScintillaDemoView::OnOptionsFoldMargin()
 {
   CScintillaCtrl& rCtrl = GetCtrl();
-  int nMarginWidth = rCtrl.GetMarginWidthN(2);
+  const int nMarginWidth = rCtrl.GetMarginWidthN(2);
   if (nMarginWidth)
     rCtrl.SetMarginWidthN(2, 0);
   else
     rCtrl.SetMarginWidthN(2, 16);
 }
 
-void CScintillaDemoView::OnUpdateOptionsFoldMargin(CCmdUI* pCmdUI) 
+#pragma warning(suppress: 26429)
+void CScintillaDemoView::OnUpdateOptionsFoldMargin(CCmdUI* pCmdUI)
 {
   pCmdUI->SetCheck(GetCtrl().GetMarginWidthN(2) != 0);
 }
 
-void CScintillaDemoView::OnOptionsSelectionMargin() 
+void CScintillaDemoView::OnOptionsSelectionMargin()
 {
   CScintillaCtrl& rCtrl = GetCtrl();
-  int nMarginWidth = rCtrl.GetMarginWidthN(1);
+  const int nMarginWidth = rCtrl.GetMarginWidthN(1);
   if (nMarginWidth)
     rCtrl.SetMarginWidthN(1, 0);
   else
     rCtrl.SetMarginWidthN(1, 16);
 }
 
-void CScintillaDemoView::OnUpdateOptionsSelectionMargin(CCmdUI* pCmdUI) 
+#pragma warning(suppress: 26429)
+void CScintillaDemoView::OnUpdateOptionsSelectionMargin(CCmdUI* pCmdUI)
 {
   pCmdUI->SetCheck(GetCtrl().GetMarginWidthN(1) != 0);
 }
 
-void CScintillaDemoView::OnOptionsViewLinenumbers() 
+void CScintillaDemoView::OnOptionsViewLinenumbers()
 {
   CScintillaCtrl& rCtrl = GetCtrl();
-  int nMarginWidth = rCtrl.GetMarginWidthN(0);
+  const int nMarginWidth = rCtrl.GetMarginWidthN(0);
   if (nMarginWidth)
     rCtrl.SetMarginWidthN(0, 0);
   else
     rCtrl.SetMarginWidthN(0, 32);
 }
 
-void CScintillaDemoView::OnUpdateOptionsViewLinenumbers(CCmdUI* pCmdUI) 
+#pragma warning(suppress: 26429)
+void CScintillaDemoView::OnUpdateOptionsViewLinenumbers(CCmdUI* pCmdUI)
 {
   pCmdUI->SetCheck(GetCtrl().GetMarginWidthN(0) != 0);
 }
 
+#pragma warning(suppress: 26429)
 void CScintillaDemoView::OnUpdateInsert(CCmdUI* pCmdUI)
 {
   CString sText;
@@ -264,35 +263,37 @@ void CScintillaDemoView::OnUpdateInsert(CCmdUI* pCmdUI)
   pCmdUI->SetText(sText);
 }
 
+#pragma warning(suppress: 26429)
 void CScintillaDemoView::OnUpdateStyle(CCmdUI* pCmdUI)
 {
    CScintillaCtrl& rCtrl = GetCtrl();
-   Sci_Position nPos = rCtrl.GetCurrentPos();
-   int nStyle = rCtrl.GetStyleAt(nPos);
+   const Sci_Position nPos = rCtrl.GetCurrentPos();
+   const int nStyle = rCtrl.GetStyleAt(nPos);
    CString sLine;
    sLine.Format(IDS_STYLE_INDICATOR, nStyle);
    pCmdUI->SetText(sLine);
-} 
+}
 
+#pragma warning(suppress: 26429)
 void CScintillaDemoView::OnUpdateFold(CCmdUI* pCmdUI)
 {
   CScintillaCtrl& rCtrl = GetCtrl();
-  Sci_Position nPos = rCtrl.GetCurrentPos();
-  int nLine = rCtrl.LineFromPosition(nPos);
+  const Sci_Position nPos = rCtrl.GetCurrentPos();
+  const int nLine = rCtrl.LineFromPosition(nPos);
   int nLevel = rCtrl.GetFoldLevel(nLine) & SC_FOLDLEVELNUMBERMASK;
   nLevel -= 1024;
-
   CString sLine;
   sLine.Format(IDS_FOLD_INDICATOR, nLevel);
   pCmdUI->SetText(sLine);
-} 
+}
 
+#pragma warning(suppress: 26429)
 void CScintillaDemoView::OnUpdateLine(CCmdUI* pCmdUI)
 {
   CScintillaCtrl& rCtrl = GetCtrl();
-  Sci_Position nPos = rCtrl.GetCurrentPos();
-  int nLine = rCtrl.LineFromPosition(nPos);
-  int nColumn = rCtrl.GetColumn(nPos);
+  const Sci_Position nPos = rCtrl.GetCurrentPos();
+  const int nLine = rCtrl.LineFromPosition(nPos);
+  const int nColumn = rCtrl.GetColumn(nPos);
 
   CString sLine;
   sLine.Format(IDS_LINE_INDICATOR, nLine, nColumn, nPos);
@@ -306,20 +307,22 @@ void CScintillaDemoView::OnCharAdded(_Inout_ SCNotification* /*pSCNotification*/
 
   //Get the previous 13 characters and if it is "scintilla is " case insensitive
   //then display a list which allows "very cool", "easy" or the "way cool!!"
-  Sci_Position nStartSel = rCtrl.GetSelectionStart();
-  Sci_Position nEndSel = rCtrl.GetSelectionEnd();
+  const Sci_Position nStartSel = rCtrl.GetSelectionStart();
+  const Sci_Position nEndSel = rCtrl.GetSelectionEnd();
   if ((nStartSel == nEndSel) && (nStartSel >= 13))
   {
     Sci_TextRange tr;
-    tr.chrg.cpMin = nStartSel - 13;
-    tr.chrg.cpMax = nEndSel;
-    char sText[14];
-    sText[0] = '\0';
-    tr.lpstrText = sText;
+#pragma warning(suppress: 26472)
+    tr.chrg.cpMin = static_cast<Sci_PositionCR>(nStartSel - 13);
+#pragma warning(suppress: 26472)
+    tr.chrg.cpMax = static_cast<Sci_PositionCR>(nEndSel);
+    CStringA sText;
+    tr.lpstrText = sText.GetBuffer(13);
     rCtrl.GetTextRange(&tr);
+    sText.ReleaseBuffer();
 
     //Display the auto completion list
-    if (_strcmpi(sText, "scintilla is ") == 0)
+    if (sText.CompareNoCase("scintilla is ") == 0)
     {
       //Display the auto completion list
       //rCtrl.AutoCSetOrder(SC_ORDER_PERFORMSORT);
@@ -447,23 +450,27 @@ void CScintillaDemoView::OnCharAdded(_Inout_ SCNotification* /*pSCNotification*/
   rCtrl.SetTabDrawMode(SCTD_STRIKEOUT);
   nMode = rCtrl.GetTabDrawMode();
   rCtrl.UsePopUp(SC_POPUP_TEXT);
+  int nFrame = rCtrl.GetCaretLineFrame();
+  rCtrl.SetCaretLineFrame(nFrame);
   */
-#endif  
+#endif
   
   //As another example, get the previous 2 characters and if it is "res" case sensitive
   //then display a list which allows "resize", "restart" and "restore"
   if ((nStartSel == nEndSel) && (nStartSel >= 3))
   {
     Sci_TextRange tr;
-    tr.chrg.cpMin = nStartSel - 3;
-    tr.chrg.cpMax = nEndSel;
-    char sText[4];
-    sText[0] = '\0';
-    tr.lpstrText = sText;
+#pragma warning(suppress: 26472)
+    tr.chrg.cpMin = static_cast<Sci_PositionCR>(nStartSel - 3);
+#pragma warning(suppress: 26472)
+    tr.chrg.cpMax = static_cast<Sci_PositionCR>(nEndSel);
+    CStringA sText;
+    tr.lpstrText = sText.GetBuffer(3);
     rCtrl.GetTextRange(&tr);
+    sText.ReleaseBuffer();
 
     //Display the auto completion list
-    if (strcmp(sText, "res") == 0)
+    if (sText == "res")
     {
       //Display the auto completion list
       rCtrl.AutoCShow(3, _T("resize\nrestart\nrestore"));
@@ -475,15 +482,17 @@ void CScintillaDemoView::OnCharAdded(_Inout_ SCNotification* /*pSCNotification*/
   if ((nStartSel == nEndSel) && (nStartSel >= 16))
   {
     Sci_TextRange tr;
-    tr.chrg.cpMin = nStartSel - 16;
-    tr.chrg.cpMax = nEndSel;
-    char sText[17];
-    sText[0] = '\0';
-    tr.lpstrText = sText;
+#pragma warning(suppress: 26472)
+    tr.chrg.cpMin = static_cast<Sci_PositionCR>(nStartSel - 16);
+#pragma warning(suppress: 26472)
+    tr.chrg.cpMax = static_cast<Sci_PositionCR>(nEndSel);
+    CStringA sText;
+    tr.lpstrText = sText.GetBuffer(16);
     rCtrl.GetTextRange(&tr);
+    sText.ReleaseBuffer();
 
     //Display the Sample indicator
-    if (_strcmpi(sText, "sample_indicator") == 0)
+    if (sText.CompareNoCase("sample_indicator") == 0)
     {
       //For demonstration purposes lets make the "C" Comment style into hotspots which turn red
       rCtrl.SetIndicatorCurrent(0);
@@ -491,10 +500,10 @@ void CScintillaDemoView::OnCharAdded(_Inout_ SCNotification* /*pSCNotification*/
       rCtrl.SetHotspotActiveFore(TRUE, RGB(255, 0, 0));
 
       //Show the indicator
-      rCtrl.IndicatorFillRange(tr.chrg.cpMin, nStartSel);
+#pragma warning(suppress: 26472)
+      rCtrl.IndicatorFillRange(tr.chrg.cpMin, static_cast<int>(nStartSel));
     }
   }
-
 }
 
 //A simple example of call tips
@@ -503,25 +512,27 @@ void CScintillaDemoView::OnDwellStart(_Inout_ SCNotification* pSCNotification)
   CScintillaCtrl& rCtrl = GetCtrl();
 
   //Only display the call tip if the scintilla window has focus
-  CWnd* pFocusWnd = GetFocus();
-  if (pFocusWnd)
+  const CWnd* pFocusWnd = GetFocus();
+  if (pFocusWnd != nullptr)
   {
     if (pFocusWnd->GetSafeHwnd() == rCtrl.GetSafeHwnd())
     {
       //Get the previous 7 characters and next 7 characters around
       //the current dwell position and if it is "author " case insensitive
       //then display "PJ Naughter" as a call tip
-      Sci_TextRange tr;
-      tr.chrg.cpMin = max(0, pSCNotification->position - 7);
-      tr.chrg.cpMax = min(pSCNotification->position + 7, rCtrl.GetLength());
-      char sText[15];
-      sText[0] = '\0';
-      tr.lpstrText = sText;
+      Sci_TextRange tr = { 0 };
+#pragma warning(suppress: 26472)
+      tr.chrg.cpMin = static_cast<Sci_PositionCR>(max(0, pSCNotification->position - 7));
+#pragma warning(suppress: 26472)
+      tr.chrg.cpMax = static_cast<Sci_PositionCR>(min(pSCNotification->position + 7, rCtrl.GetLength()));
+      CStringA sText;
+      tr.lpstrText = sText.GetBuffer(14);
       rCtrl.GetTextRange(&tr);
+      sText.ReleaseBuffer();
 
       //Display the call tip
-      _strupr_s(sText, sizeof(sText));
-      if (strstr(sText, "AUTHOR "))
+      sText.MakeUpper();
+      if (sText.Find("AUTHOR ") != -1)
         rCtrl.CallTipShow(pSCNotification->position, _T("PJ Naughter"));
     }
   }
@@ -536,10 +547,11 @@ void CScintillaDemoView::OnDwellEnd(_Inout_ SCNotification* /*pSCNotification*/)
     rCtrl.CallTipCancel();
 }
 
+#pragma warning(suppress: 26434)
 void CScintillaDemoView::OnActivate(UINT nState, CWnd* pWndOther, BOOL bMinimized) 
 {
   //Let the base class do its thing
-  CScintillaView::OnActivate(nState, pWndOther, bMinimized);
+  __super::OnActivate(nState, pWndOther, bMinimized);
 
   CScintillaCtrl& rCtrl = GetCtrl();
 
@@ -550,10 +562,12 @@ void CScintillaDemoView::OnActivate(UINT nState, CWnd* pWndOther, BOOL bMinimize
 
 void CScintillaDemoView::OnModifyAttemptRO(_Inout_ SCNotification* /*pSCNotification*/)
 {
+#pragma warning(suppress: 26493)
   if (AfxMessageBox(IDP_ALLOW_MODIFY_READONLY_FILE, MB_YESNO) == IDYES)
     GetCtrl().SetReadOnly(FALSE);
 }
 
+#pragma warning(suppress: 26440)
 void CScintillaDemoView::OnModified(_Inout_ SCNotification* pSCNotification)
 {
   if (pSCNotification->modificationType & SC_MOD_INSERTCHECK)
@@ -565,4 +579,9 @@ void CScintillaDemoView::OnModified(_Inout_ SCNotification* pSCNotification)
       rCtrl.ChangeInsertion(18, _T("Capital of Ireland"));
   #endif
   }
+}
+
+std::unique_ptr<CScintillaCtrl> CScintillaDemoView::CreateScintillaControl()
+{
+  return std::make_unique<CScintillaDemoCtrl>();
 }
